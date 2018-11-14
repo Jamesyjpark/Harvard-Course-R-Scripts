@@ -1,0 +1,236 @@
+---
+title: "Homework 3: The Casino and Baseball"
+output: html_document
+---
+ 
+# Question 1
+
+In the game of [roulette](https://en.wikipedia.org/wiki/Roulette) you can bet on several things including black or red. On this bet, if you win, you double your earnings. In this problem we will look at how the casino makes money on this. If you look at the [possibilities](http://www.math.uah.edu/stat/games/Roulette.png), you realize that the chance of red or black are both slightly less than 1/2. There are two green spots, so the probability of landing on black (or red) is actually 18/38, or 9/19.
+
+### Question 1A
+
+Let's make a quick sampling model for this simple version of roulette. You are going to bet a dollar each time you play and always bet on black. Make a sampling model for this process using the `sample` function. Write a function `roulette` that takes as an argument the number of times you play, $n$, and returns your earnings, which here we denote with $S_n$.
+
+
+```{r}
+roulette <- function(n){
+  x <- sample( c(-1,1), n, replace=TRUE, prob=c(9/19,10/19))
+  sum(x)
+}
+```
+
+The 'roulette' function is a sampling model because we are modeling the random behavior of roulette with the sampling of draws from an urn. This code chunk takes the number of times one plays as an argument denoted as $n$, and returns your earnings by summing the $x$ variable. In the second portion of the code, a random number of 1000 was assigned to $n$ to see the behavior of the roulette function created.
+
+### Question 1B
+
+Use Monte Carlo simulation to study the distribution of total earnings $S_n$ for $n = 100, 250, 500, 1000$. That is, for each value of $n$, make one or more plots to examine the distribution of earnings. Examine the plots, and describe how the expected values and standard errors change with $n$. You do not need to show us the plots. Just the code you used to create them. Hints: It's OK to use a for-loop. Think about the possible values $S_n$ can take when deciding on the `geom_histogram` parameters such as `binwidth` and `center`.
+
+
+```{r}
+B <- 10000
+
+for(n in c(100, 250, 500, 1000)){
+  win <- replicate(B,roulette(n))
+  calc <- (win - mean(win))/sd(win)
+  cat("When the sample size is", n, "The expected value is", mean(win), "with standard error", sd(win),"\n")
+  qqnorm(calc)
+  hist(calc, main = "Histogram by the sample size n")
+}
+```
+
+As $n$ gets larger, while the expected value increases somewhat linearly, the standard error does not increase linearly because the average standard error gets smaller as $n$ increases. The output values are shown above.
+
+One can see that this distribution closely approximates a normal distribution by looking at the QQ-plot because the residuals fall on the y = x line even when the sample size is realtively small (n = 25). Another asessement tool to check the normality is looking at the histogram. Unlike the QQ plot, four different histograms clearly tell you that the distribution gets closer to normal as $n$ gets larger. As n increases, the histogram becomes more symmetric and centered around 0. 
+
+These are expected by the central limit theorem because $S_n$ is approximately normal with the expected value $\mu N$ and standard error $\sigma \sqrt{N}$. 
+
+### Question 1C
+
+Repeat Problem 1B but for the means instead of the sums. After your answer, describe the mathematical results that you can use to answer this without making plots.
+
+```{r}
+for(n in c(100, 250, 500, 1000)){
+  avg.win <- replicate(B,roulette(n))/n
+  calc <- (avg.win - mean(avg.win))/sd(avg.win)
+  cat("When the sample size is", n, "The expected value is", mean(avg.win), "with standard error", sd(avg.win),"\n")
+}
+```
+
+When we use the means instead of the sums, the results of the expected value stay approximately the same by the differing $n$ as shown above. This makes sense because the function $E(\bar{X})=\mu$ is not a function of $n$; therefore, alternating the sample size will not affect the mean. However, the standard error and $n$ are inversely related, resulting in decreased values as $n$ increases. This can be explained without making plots by the mathematical formula of the standard error $SE(\bar{X}) = \frac{\sigma}{\sqrt{n}}$. Therefore, it makese sense that the standard error decreases as $n$ gets larger.
+
+
+### Question 1D
+
+Now think of a sampling model for our casino problem. What is the expected value of our sampling model? What is the standard deviation of our sampling model?
+
+
+The sampling model for the casino problem approximates the binomial sampling model that is normally distributed $X \sim N(\mu,\sigma^2)$.
+
+By using the model property mentioned above, the expected value of our sampling model is:
+
+$$\begin{aligned} 
+E(X) &= n\left[p(X=1)+(1-p)(X=-1)\right] \\
+&= n\left[\left(\frac{10}{19}\right) -\left(\frac{9}{19}\right)\right] \\
+&=\frac{1}{19}~n 
+\end{aligned}$$
+
+And the standard deviation of the casino model is:
+
+$$ \begin{aligned}
+SD(X) &= \sqrt{p(1-p)}\sqrt{n}\mid b - a \mid\\
+&= \sqrt{n}\mid 2 \mid \sqrt{\frac{10}{19} \times \frac{9}{19}} \\
+&\approx \sqrt{n}
+\end{aligned}$$
+
+
+### Question 1E
+
+Suppose you play 100 times. Use the Central Limit Theorem (CLT) to approximate the probability that the casino loses money. Then use a Monte Carlo simulation to corroborate your finding.
+
+Using the Central Limit Theorem, we can approximate the probability of the casino losing money using the pbinom function in R. Given that we play 100 times, and the probability of 10/19, the probability is:
+
+```{r}
+pbinom(100/2-1, size = 100, prob = 10/19)
+```
+
+Using a a Monte Carlo simulation, the probability is:
+
+```{r}
+B <- 10000
+win <- replicate(B, roulette(100))
+mean(win<0)
+```
+
+By directly comparing these two numbers, one can see that the Monte Carlo simulation closely approximates the probability that is obtained theoretically. 
+
+### Question 1F
+
+In general, what is the probability that the casino loses money as a function of $n$? Make a plot for values ranging from 25 to 1,000. Why does the casino give you free drinks if you keep playing?
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+B <- 100
+sequence <- seq(25,1000)
+
+prob <- c()
+for (i in sequence){
+  win <- replicate(B, roulette(i))
+  prob <- c(prob, mean(win<0))
+}
+
+data.frame(sequence, prob) %>% ggplot(aes(sequence, prob)) + geom_line(col = "grey") + theme_classic() + scale_y_continuous(expand = c(0,0)) + xlab("Times played") + ylab("Probability") + ggtitle("You lose more money if you play longer in the casino")
+```
+
+
+As $n$, the number of games played, increases, the probability of the casino losing money decreases. The casino wants you to stay at the table for a long time with free drinks because the odds of you losing money is probably higher than the free drinks that the casino pays for (I personally should have taken this class and done this assignment before I went to Vegas last year).
+
+
+# Question 2
+
+The baseball playoffs are about to start. During the first round of the playoffs, teams play a best of five series. After the first round, they play seven game series.
+
+### Question 2A
+
+The Red Sox and Astros are playing a five game series. Assume they are equally good. This means each game is like a coin toss. Build a Monte Carlo simulation to determine the probability that the Red Sox win the series. (Hint: start by creating a function `series_outcome` similar to the `roulette` function from Problem 1A.)
+
+```{r}
+B <- 10000
+
+outcome.equal <- function(play){
+  teams <- c("Red Sox", "Astros")
+  series <- sample(teams, play, replace = TRUE)
+  redsox.win <- length(series[series=="Red Sox"])
+  redsox.win
+}
+
+series.outcome <- replicate(B,outcome.equal(5))
+prob.redsox.win <- length(series.outcome[series.outcome > 2]) / length(series.outcome)
+
+prob.redsox.win
+```
+
+When the Red Sox and and Astros are playing a five game series, the probability of the Rex Sox winning the series is approximated as 0.4995 when two teams are equally good, which is approximately 0.5. This function is built based on 10000 simulations, and to win the series, the Red Sox must win at least 3 games. When the number of simulation increases the probability gets numerically closer to 0.5. This makes sense because each team would have approximately 50% change of winning if two teams are equally good. 
+
+
+### Question 2B
+
+The answer to Problem 2A is not surprising. What if one of the teams is better? Compute the probability that the Red Sox win the series if the Astros are better and have a 60% of winning each game.
+
+```{r}
+B <- 10000
+
+outcome.unequal <- function(play){
+  teams <- c("Red Sox", "Astros")
+  series <- sample(teams, play, replace = TRUE, prob = c(0.4, 0.6))
+  redsox.win <- length(series[series=="Red Sox"])
+  redsox.win
+}
+
+series.outcome <- replicate(B,outcome.unequal(5))
+prob.redsox.win <- length(series.outcome[series.outcome > 2]) / length(series.outcome)
+
+prob.redsox.win
+```
+
+When the Red Sox and and Astros are playing a five game series, the probability of the Rex Sox winning the series is approximated as 0.3138 (31%) when the Astros are better and have a 60% of winning each game. This function is built based on 10000 simulations. When the number of simulation increases the probability gets numerically closer to 0.32. This makes sense because the Red Sox has a 40% chance of winning each game, and the Red Sox must win more than 2 games to win the series.
+
+
+### Question 2C 
+
+How does this probability change if instead of five games, they play seven? How about three? What law did you learn that explains this?
+
+```{r}
+B <- 10000
+
+#1. equal probability of winning- both 50%
+series.outcome <- replicate(B,outcome.equal(7))
+prob.redsox.win <- length(series.outcome[series.outcome > 3]) / length(series.outcome)
+prob.redsox.win
+
+series.outcome <- replicate(B,outcome.equal(3))
+prob.redsox.win <- length(series.outcome[series.outcome > 1]) / length(series.outcome)
+prob.redsox.win
+
+#2. Unequal probability of winning- Red sox (40% winning)
+series.outcome <- replicate(B,outcome.unequal(7))
+prob.redsox.win <- length(series.outcome[series.outcome > 3]) / length(series.outcome)
+prob.redsox.win
+
+series.outcome <- replicate(B,outcome.unequal(3))
+prob.redsox.win <- length(series.outcome[series.outcome > 1]) / length(series.outcome)
+prob.redsox.win
+
+```
+
+When we used the function from 2(a) where both teams had an equal chance of winning, the probability of the Red Sex winning is approximately as 0.498 (50%) when 7 games are played and 0.507 (51%) when 3 games are played. These results make sense because both teams have 50% chance of winning each game. 
+
+When we then used the function from 2(b) where the Red Sox had a 40% chance of winning each game, the probability of the Red Sox winnning is 0.28 (28%) when 7 games are played and 0.35 (35%) when 3 games are played.
+
+The results from both models demonstrate the law of large numbers. According to the [law of large numbers](https://en.wikipedia.org/wiki/Law_of_large_numbers), the average of the results obtained from a large numbers of trials should be close to the expected value, and will tend to become closer as more trials are performed. As the number of games played in the series increases, the chance of the Red Sox winning the series will approach the expected value followed by the [binominal distribution](https://stattrek.com/probability-distributions/binomial.aspx).
+
+
+### Question 2D
+
+Now, assume again that the two teams are equally good. What is the probability that the Red Sox still win the series if they lose the first game? Do this for a five game and seven game series.
+
+```{r}
+B <- 10000
+
+# The Red Sox wins 3 or more out of 4
+series.outcome <- replicate(B,outcome.equal(4))
+prob.redsox.win <- length(series.outcome[series.outcome > 2]) / length(series.outcome)
+prob.redsox.win
+
+# The Red Sox wins 4 or more out of 6
+series.outcome <- replicate(B,outcome.equal(6))
+prob.redsox.win <- length(series.outcome[series.outcome > 3]) / length(series.outcome)
+prob.redsox.win
+```
+
+We are using the 'outcome.equal()' function that we used from 2(a) since the two teams have the equal chance of winning each game. The probabilities from this question are obtained using 10000 simulations. 
+
+When five games are played, there are only four games left if the Red Sox lost the first game. To win the series, the Red Sox must win at least three games. The probabilty of the Red Sox winning three or all four games is calculated as 0.31 (31%). 
+
+When seven games are played, there are only six games left if the Red Sox lost the first game. To win the series, The Red Sox must win at least four games. To probability of the Red Sox winning four or more games is calculated as 0.335 (34%). The difference betweenn these two probabilities makes sense intuitively because the Red Sox has more probable scenarios of winning the series when the number of games played increases. 

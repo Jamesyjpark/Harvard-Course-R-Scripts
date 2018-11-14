@@ -1,0 +1,219 @@
+---
+title: "Homework 2"
+date: "Due October 17, 2018"
+author: James Yeongjun Park
+output: html_document
+---
+
+
+Vaccines have helped save millions of lives. In the 19th century, before herd immunization was achieved through vaccination programs, deaths from infectious diseases, like smallpox and polio, were common. However, today, despite all the scientific evidence for their importance, vaccination programs have become somewhat controversial.
+
+The controversy started with a [paper](http://www.thelancet.com/journals/lancet/article/PIIS0140-6736(97)11096-0/abstract) published in 1988 and lead by [Andrew Wakefield](https://en.wikipedia.org/wiki/Andrew_Wakefield) claiming 
+there was a link between the administration of the measles, mumps and rubella (MMR) vaccine, and the appearance of autism and bowel disease. 
+Despite much science contradicting this finding, sensationalists media reports and fear mongering from conspiracy theorists, led parts of the public to believe that vaccines were harmful. Some parents stopped vaccinating their children. This dangerous practice can be potentially disastrous given that the Center for Disease Control (CDC) estimates that vaccinations will prevent more than 21 million hospitalizations and 732,000 deaths among children born in the last 20 years (see [Benefits from Immunization during the Vaccines for Children Program Era — United States, 1994-2013, MMWR](https://www.cdc.gov/mmwr/preview/mmwrhtml/mm6316a4.htm)). 
+
+Effective communication of data is a strong antidote to misinformation and fear mongering. In this homework you are going to prepare a report to have ready in case you need to help a family member, friend or acquaintance that is not aware of the positive impact vaccines have had for public health.
+
+The data used for these plots were collected, organized and distributed by the [Tycho Project](vi). They include weekly reported counts data for seven diseases from 1928 to 2011, from all fifty states. We include the yearly totals in the `dslabs` package:
+
+```{r, warning = FALSE}
+library(dslabs)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+data(us_contagious_diseases)
+```
+
+1. Use the `us_contagious_disease` and `dplyr` tools to create an object called `dat` that stores only the Measles data, includes a per 100,000 people rate, and removes Alaska and Hawaii since they only became states in the late 50s. Note that there is a `weeks_reporting` column. Take that into account when computing the rate.
+
+To accurately calcualte the rate, the count column is divded by the weeks reporting column, which is then multiplied by 52 as there are 52 weeks in one year. This number is then dividied by a modified population measure that is calculated by the total population divided by 100,000 to yield a per 100,000 people rate. Also note that Alaska and Hawaii are removed from the dataframe for future analyses. 
+
+```{r, warning = FALSE}
+us_contagious_diseases$rate <- (((us_contagious_diseases$count/us_contagious_diseases$weeks_reporting))*52)/(us_contagious_diseases$population/100000)
+
+dat <- us_contagious_diseases %>% 
+  filter(disease == "Measles", state != "Hawaii", state != "Alaska")
+```
+
+2. Plot the Measles disease rate per year for California. Find out when the Measles vaccine was introduced and add a vertical line to the plot to show this year.
+
+The Measles vaccine was first introduced in [1963](https://www.cdc.gov/measles/about/history.html) by John Enders and colleagues who transformed their Edmonston-B strain of Measels virus into a vaccine and licensed it in the United States. In the following plot, a grey vertical line is added to indicate the year the Measles vaccine was introduced. 
+
+```{r, warning = FALSE}
+dat %>% filter(state == "California") %>% filter(!is.na(rate)) %>%
+ggplot(aes(x = year, y = rate)) + geom_line()+ geom_vline(xintercept = 1963, col = "grey") + annotate("text", x = 1963, y= 1000, angle = 90, label = paste("paste(Vaccine)", collapse = "_"), vjust = 1.2, parse = TRUE, size = 2.5) + scale_y_continuous(limits = c(0,1500), expand = c(0,0)) + theme_classic() + ggtitle("Measles disease rate per year in California") + theme(plot.title = element_text(hjust = 0.5)) + ylab("Measles disease rate")
+```
+
+3. Note these rates start off as counts. For larger counts we can expect more variability. There are statistical explanations for this which we don't discuss here. But transforming the data might help stabilize the variability such that it is closer across levels. For 1950, 1960, and 1970, plot the histogram of the data across states with and without the square root transformation. Which seems to have more similar variability across years? Make sure to pick binwidths that result in informative plots.
+
+```{r, warning = FALSE}
+dat1 <- us_contagious_diseases %>% select(disease, rate, state, year, count) %>% filter(disease == "Measles", state != "Alaska", state != "Hawaii", !is.na(rate))
+
+p1a <- dat1 %>% filter(year == 1950) %>% ggplot(aes(x = count)) + geom_histogram(bins = 15, fill = "grey", col = "black") + facet_grid(~year) + theme_classic() + xlab("Total Measles Cases") + ylab("Frequency by state") + scale_y_continuous(expand = c(0,0))
+p1b <- dat1 %>% filter(year == 1950) %>% ggplot(aes(x = sqrt(count))) + geom_histogram(bins = 15 ,fill = "grey", col = "black") + facet_grid(~year) + theme_classic()+ xlab("Total Measles Cases (square-rooted) ") + ylab("Frequency by state") + scale_y_continuous(expand = c(0,0))
+p2a <- dat1 %>% filter(year == 1960) %>% ggplot(aes(x = count)) + geom_histogram(bins = 15, fill = "grey", col = "black") + facet_grid(~year) + theme_classic()+ xlab("Total Measles Cases") + ylab("Frequency by state") + scale_y_continuous(expand = c(0,0))
+p2b <- dat1 %>% filter(year == 1960) %>% ggplot(aes(x = sqrt(count))) + geom_histogram(bins = 15 ,fill = "grey", col = "black") + facet_grid(~year) + theme_classic()+ xlab("Total Measles Cases (square-rooted) ") + ylab("Frequency by state")+ scale_y_continuous(expand = c(0,0))
+p3a <- dat1 %>% filter(year == 1970) %>% ggplot(aes(x = count)) + geom_histogram(bins = 15, fill = "grey", col = "black") + facet_grid(~year) + theme_classic()+ xlab("Total Measles Cases") + ylab("Frequency by state")+ scale_y_continuous(expand = c(0,0))
+p3b <- dat1 %>% filter(year == 1970) %>% ggplot(aes(x = sqrt(count))) + geom_histogram(bins = 15 ,fill = "grey", col = "black") + facet_grid(~year) + theme_classic()+ xlab("Total Measles Cases (square-rooted) ") + ylab("Frequency by state")+ scale_y_continuous(expand = c(0,0))
+
+grid.arrange(p1a,p1b,p2a,p2b,p3a,p3b, nrow = 3, ncol = 2)
+
+```
+
+The histrograms without square root transformation are informative; however, there seems to be more variability for larger and smaller counts. One way to overcome this issue is transforming the data, which stabilizes the variability so that the data is closer across levels. One can see that the issue with variability is better addressed when a square root transformation is used as the data is now closer across levels. 
+
+
+```{r, warning = FALSE}
+years <- c(1950, 1960, 1970)
+
+# Without transformation - barplot for indicidual state
+dat %>%
+  filter(year %in% years) %>% mutate(state = reorder(state, rate, FUN = mean)) %>% filter(!is.na(rate)) %>%
+  ggplot(aes(x = state, y = rate)) + geom_histogram(binwidth = 1 ,color = "grey", stat = "identity")+ theme_classic() + scale_y_continuous(expand=c(0,0)) + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Histogram of Measles Distribution") + theme(plot.title = element_text(hjust = 0.5)) + facet_wrap(~year, ncol = 1) + xlab("State")
+
+# Square root transformatipn - barplot for individual state
+dat %>%
+  filter (year %in% years) %>% mutate(state = reorder(state, rate, FUN = mean)) %>% filter(!is.na(rate)) %>%
+  ggplot(aes(x = state, y = rate)) + geom_histogram(binwidth = 1 ,color = "grey", stat = "identity")+ theme_classic() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Histogram of Measles Distribution (square root transformation)") + theme(plot.title = element_text(hjust = 0.5)) + scale_y_sqrt() + facet_wrap(~year, ncol = 1) + xlab("State")
+```
+
+Effects of the square root transformation can also be seen by looking at the bar plot of each state for 1950, 1960, and 1970. A sqaure root transformation was performed on the y-axis to overcome issues with the variability for larger and smaller rates. By transforming the data, the variability was stabilized acroess levels in the bar plot. 
+
+
+4. Plot the Measles disease rate per year for California. Use the the square root transformation. Make sure that the numbers $0,4,16,36, \dots, 100$ appear on the y-axis.
+Find out when the Measles vaccine was introduced and add a vertical line to the plot to show this year.
+
+From question 2, we confirmed that the Measles vaccine was introduced in 1963. 
+
+```{r, warning = FALSE}
+dat %>%
+  filter(state == "California") %>% filter(!is.na(rate)) %>%
+ggplot(aes(x = year, y = rate)) + geom_line() + geom_vline(xintercept = 1963, col = "grey") + annotate("text", x = 1963, y= 1000, angle = 90, label = paste("paste(Vaccine)", collapse = "_"), vjust = 1.2, parse = TRUE, size = 2.5) + scale_y_sqrt(breaks = (seq(0,100,2))^2) + theme_classic()+ ggtitle("Measles disease rate per year for California") + theme(plot.title = element_text(hjust = 0.5)) + ylab("Measles Rate- square root transformed")
+```
+
+5. Now, this is just California. Does the pattern hold for other states? Use boxplots to get an idea of the distribution of rates for each year, and see if the pattern holds across states.
+
+```{r, warning = FALSE}
+dat %>% filter (!is.na(rate)) %>% mutate(state = reorder(state, rate, FUN = mean)) %>%  ggplot(aes(x = factor(year), y = rate)) + theme_classic() + geom_boxplot() + scale_y_sqrt()+ theme(axis.text.x = element_text(angle = 90, hjust = 1, size = 6.5)) + ggtitle("Boxplot of Measles Distribution") + theme(plot.title = element_text(hjust = 0.5)) + ylab("Measles rate- square root transformed") + xlab("Year")
+```
+
+Although the boxplot helps one see composite U.S trends of Measles distribution in different years, the boxplot does not illustrate state specific trends. It appears that the overall rate decreases over time, but this does not illustrate anything about state-specific trends. 
+
+```{r, warning = FALSE}
+dat %>% filter (!is.na(rate)) %>% mutate(state = reorder(state, rate, FUN = mean)) %>%  ggplot(aes(x = factor(year), y = rate, color = state)) + theme_classic() + geom_boxplot() + scale_y_sqrt()+ theme(axis.text.x = element_text(angle = 90, hjust = 1)) + ggtitle("Boxplot of Measles Distribution") + theme(plot.title = element_text(hjust = 0.5)) + ylab("Measles rate- square root transformed") + xlab("Year") + scale_x_discrete(breaks = seq(1928,2010,20))
+```
+
+This plot demonstrates how the boxplot does not illustrate state-specific trends. Boxplots disappear once the color function is added to stratify the data to see state-specific trends.
+
+6. One problem with the boxplot is that it does not let us see state-specific trends. Make a plot showing the trends for all states. Add the US average to the plot. Hint: Note there are missing values in the data.
+
+```{r, warning = FALSE}
+# This replaced num 5 but with better trends
+dat %>%
+  filter(!is.na(rate)) %>% mutate(state = reorder(state, rate, FUN = mean)) %>%
+ggplot(aes(year,rate, color = state)) + geom_line(alpha = 0.5) + theme_classic() + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + scale_y_sqrt() + stat_summary(fun.y=mean, geom="line",lwd=0.7,col="black") + annotate("text", x = 1950, y = 490, label = "US average", size = 3) + ggtitle("US Measles Distribution") + annotate("text", x = 1963, y= 2000, angle = 90, label = paste("paste(Vaccine)", collapse = "_"), vjust = 1.2, parse = TRUE, size = 2.5) + geom_vline(xintercept = 1963, col = "grey")
+```
+
+Line graphs are used to see state-specific trends. Using the color function, one can see state specific trends; however, because there are too many lines in one graph, it is still difficult to distinguish states from each other.
+
+7. One problem with the plot above is that we can't distinguish states from each other. There are just too many. We have three variables to show: year, state and rate. If we use the two dimensions to show year and state then we need something other than vertical or horizontal position to show the rates. Try using color. Hint: Use the the geometry `geom_tile` to tile the plot with colors representing disease rates. 
+
+```{r, warning = FALSE}
+dat %>% filter(!is.na(rate)) %>%
+ggplot(aes(year, state)) + geom_tile(aes(fill = rate), color = "white") + scale_fill_gradient(low = "white", high = "blue", trans = "sqrt") + scale_x_continuous(expand = c(0,0)) + ggtitle("Measles disease rate per year in the United States") + theme(plot.title = element_text(hjust = 0.5)) + geom_vline(xintercept = 1963, col = "black")
+```
+
+The geometry to title the plot with colors representing disease rates helps one better visualize state-specific trends that are diffcult to analyze using box plots and line graphs. A square root transformation is used to avoid having high counts that can possibly dominate the plot. Note that Grey squares simply denote missing values.
+
+
+8. The plots above provide strong evidence showing the benefits of vaccines: as vaccines were introduced, disease rates were reduced. But did autism increase? Find yearly reported autism rates data and provide a plot that shows if it has increased and if the increase coincides with the introduction of vaccines.
+
+Autism was conceptualized and discovered in 1943 by a doctor named Leo Kanner. At the time, treatment for autism was extremely limited. However, much has changed in the past seven decades; now we know that autism is mostly caused by a combination of environmental and genetic factors. However, as vaccines were introduced, Autism rate was not reduced. In fact, the prevalence of autism increased, not coinciding with the introduction of vaccines that reduced disease rates. The data used in this plot is acquired from [the Centers for Disease Control and Prevention](https://www.cdc.gov/ncbddd/autism/data.html). CDC began tracking the prevalence of autism and characteristics of children with autism in the United States in 1998; therefore, the timeline of the autism data does not perfectly align with that of the vaccine data; however, acquiring the 20th century autism data is difficult, and the rationale behind my decision to work with this data is because this data focuses on the U.S population. If one is more curious to see the historical autism data for a longer timeline, one might be interested in another [data](https://www.cdc.gov/ncbddd/autism/documents/ASDPrevalenceDataTable2016.pdf) that is also provided by the CDC. This data clearly presents how autism kept increasing over time. There are also other plots that are externally available that depect the trends of the autism prevalnce like the one from [Statista](https://www.statista.com/statistics/236348/number-of-disabled-youth-with-autism-in-the-us/).
+
+This data was imported from the CDC website. Initially, I saved the data as an excel file and modified to conveniently manipulate the dataframe in R. However, for an easier knitting process for BST260 team, I manually created the dataframe in R especially since there are not many data points in the autism data that I am using for this analysis. One must note that this is an extremely simplified analysis, and more detailed analyses can be facilitaed through sophisticated web-scraping from different data sources. 
+
+```{r, warning = FALSE, eval = FALSE}
+setwd("/Users/yeongjunpark1/Desktop")
+autism <- read.csv("autism.csv") # excel data
+autism <- autism[!is.na(autism),][c(1:8),]
+colnames(autism) <- c("year", "prevalence")
+```
+
+```{r, warning = FALSE}
+# Manual autism dataframe
+autism <- as.data.frame(cbind(seq(2000,2014,2), c(6.7, 6.6, 8.0, 9.0, 11.3, 14.7, 14.6, 16.8)))
+colnames(autism) <- c("year", "prevalence")
+
+ggplot(autism, aes(year, prevalence)) + geom_histogram(stat = "identity", color = "black", binwidth = 10) + theme_classic() + ylab("Prevalence per 1000 Children") + ggtitle("Autism Prevalencee in the United States") + theme(plot.title = element_text(hjust = 0.5)) + scale_y_continuous(expand = c(0,0))
+
+```
+
+This plot demonstrates how autism prevalence increased over time in the United States, not coincidinng with the positive outcomes accomplished by the introduction of vaccinnes. Such trends are also observed and substantiated in other studies in the autism literature. This plot suggests that autism prevalence among children aged 8 years in multiple U.S communities have almost consistetnly increased. This observed increase in autism prevalence emphasizes the need for continued survelliance using consistent methods to facilitate a long-term monitoing in the population. 
+
+
+9. Use data exploration to determine if other diseases (besides Measles) have enough data to explore the effects of vaccines. Prepare a report with as many plots as you think are necessary to provide a case for the benefit of vaccines. Note that there was a data entry mistake and the data for Polio and Pertussis are exactly the same. 
+
+Polio is excluded from the analysis because of the duplicate data between Polio and Pertussis. Also, Alaska and Hawaii are still excluded from this analysis. 
+
+```{r, warning = FALSE}
+# It's really hard to see with the tile graph
+us_contagious_diseases %>% filter (!is.na(rate)) %>% filter(disease != "Polio", state != "Hawaii", state != "Alaska", disease == "Hepatitis A") %>% ggplot(aes(year,state)) + geom_tile(aes(fill = rate), color = "white")+ scale_fill_gradient(low = "white", high = "blue", trans = "sqrt") + scale_x_continuous(expand = c(0,0)) + facet_wrap(~disease) + geom_vline(xintercept = 1995, col = "black")
+
+us_contagious_diseases %>% filter (!is.na(rate)) %>% filter(disease != "Polio", state != "Hawaii", state != "Alaska", disease == "Mumps") %>% ggplot(aes(year,state)) + geom_tile(aes(fill = rate), color = "white")+ scale_fill_gradient(low = "white", high = "blue", trans = "sqrt") + scale_x_continuous(expand = c(0,0)) + facet_wrap(~disease) + geom_vline(xintercept = 1969, col = "black")
+
+us_contagious_diseases %>% filter (!is.na(rate)) %>% filter(disease != "Polio", state != "Hawaii", state != "Alaska", disease == "Pertussis") %>% ggplot(aes(year,state)) + geom_tile(aes(fill = rate), color = "white")+ scale_fill_gradient(low = "white", high = "blue", trans = "sqrt") + scale_x_continuous(expand = c(0,0)) + facet_wrap(~disease)+ geom_vline(xintercept = 1948, col = "black")
+
+us_contagious_diseases %>% filter (!is.na(rate)) %>% filter(disease != "Polio", state != "Hawaii", state != "Alaska", disease == "Rubella") %>% ggplot(aes(year,state)) + geom_tile(aes(fill = rate), color = "white")+ scale_fill_gradient(low = "white", high = "blue", trans = "sqrt") + scale_x_continuous(expand = c(0,0)) + facet_wrap(~disease)+ geom_vline(xintercept = 1971, col = "black")
+
+us_contagious_diseases %>% filter (!is.na(rate)) %>% filter(disease != "Polio", state != "Hawaii", state != "Alaska", disease == "Smallpox") %>% ggplot(aes(year,state)) + geom_tile(aes(fill = rate), color = "white")+ scale_fill_gradient(low = "white", high = "blue", trans = "sqrt") + scale_x_continuous(expand = c(0,0)) + facet_wrap(~disease)
+```
+
+Remember how a solid black line indicates the year vaccine was introduced. I initially used the geometry 'geom_tile' to tile the plots with colors representing diseases rates for each disease. They all seem to show similar patterns as those of Measles because the colors of the tiles become lighter over time especailly after the introduction of vaccine. However, small Pox showed somewhat dubious observations where some states have higher disease rates than they did in the beginning. To clearly assess the trends, I generated line plots because the line plots showed the most clear analyses in previous problems.
+
+```{r, warning = FALSE}
+us_contagious_diseases %>%
+  filter(!is.na(rate)) %>%
+  filter(disease != "Polio", state != "Hawaii", state != "Alaksa") %>%
+ggplot(aes(x = year, y = rate, color = disease)) + geom_line() + scale_y_sqrt(breaks = (seq(0,100,2))^2) + theme_classic()+ ggtitle("All diseases rate per year for all states") + theme(plot.title = element_text(hjust = 0.5)) + ylab("Disease Rate- square root transformed")
+
+```
+
+When the line plots of all diseases are combined, the analysis becomes much harder although all diseases seem to demonstrate decreasing trends. Therefore, I decided to undergo individual examination of each disease with an additional incorporation of fitting generalized linear models. 
+
+```{r, warning = FALSE}
+# All diseases combined
+us_contagious_diseases %>%
+  filter(!is.na(rate)) %>%
+  filter(disease != "Polio", state != "Hawaii", state != "Alaksa", disease == "Hepatitis A") %>%
+ggplot(aes(x = year, y = rate, color = disease)) + geom_line(col = "grey") + scale_y_sqrt(breaks = (seq(0,100,2))^2) + theme_classic()+ ggtitle("Hepatitis A disease rate per year for all states") + theme(plot.title = element_text(hjust = 0.5)) + ylab("Hepatitis A Rate- square root transformed") + stat_smooth(method = "glm") + geom_vline(xintercept = 1995, col = "black") + annotate("text", x = 1995, y= 500, angle = 90, label = paste("paste(Vaccine)", collapse = "_"), vjust = 1.2, parse = TRUE, size = 2.5)
+# Hepatitus A vaccine introduced in 1995
+
+us_contagious_diseases %>%
+  filter(!is.na(rate)) %>%
+  filter(disease != "Polio", state != "Hawaii", state != "Alaksa", disease == "Mumps") %>%
+ggplot(aes(x = year, y = rate, color = disease)) + geom_line(col = "grey") + scale_y_sqrt(breaks = (seq(0,100,2))^2) + theme_classic()+ ggtitle("Mumps disease rate per year for all states") + theme(plot.title = element_text(hjust = 0.5)) + ylab("Mumps Rate- square root transformed") + stat_smooth(method = "glm") + geom_vline(xintercept = 1969, col = "black") + annotate("text", x = 1969, y= 400, angle = 90, label = paste("paste(Vaccine)", collapse = "_"), vjust = 1.2, parse = TRUE, size = 2.5)
+# Mumps vaccine was introduced in 1969
+
+us_contagious_diseases %>%
+  filter(!is.na(rate)) %>%
+  filter(disease != "Polio", state != "Hawaii", state != "Alaksa", disease == "Pertussis") %>%
+ggplot(aes(x = year, y = rate, color = disease)) + geom_line(col = "grey") + scale_y_sqrt(breaks = (seq(0,100,2))^2) + theme_classic()+ ggtitle("Pertussis disease rate per year for all states") + theme(plot.title = element_text(hjust = 0.5)) + ylab("Pertussis Rate- square root transformed") + stat_smooth(method = "glm") + geom_vline(xintercept = 1948, col = "black") + annotate("text", x = 1948, y= 500, angle = 90, label = paste("paste(Vaccine)", collapse = "_"), vjust = 1.2, parse = TRUE, size = 2.5)
+# vaccine introduced in late 1940's- line in 1948
+
+us_contagious_diseases %>%
+  filter(!is.na(rate)) %>%
+  filter(disease != "Polio", state != "Hawaii", state != "Alaksa", disease == "Rubella") %>%
+ggplot(aes(x = year, y = rate, color = disease)) + geom_line(col = "grey") + scale_y_sqrt(breaks = (seq(0,100,2))^2) + theme_classic()+ ggtitle("Rubella disease rate per year for all states") + theme(plot.title = element_text(hjust = 0.5)) + ylab("Rubella Rate- square root transformed") + stat_smooth(method = "glm") + geom_vline(xintercept = 1971, col = "black") + annotate("text", x = 1971, y= 250, angle = 90, label = paste("paste(Vaccine)", collapse = "_"), vjust = 1.2, parse = TRUE, size = 2.5)
+# vaccine introduced in 1971
+
+us_contagious_diseases %>%
+  filter(!is.na(rate)) %>%
+  filter(disease != "Polio", state != "Hawaii", state != "Alaksa", disease == "Smallpox") %>%
+ggplot(aes(x = year, y = rate, color = disease)) + geom_line(col = "grey") +  scale_y_sqrt(breaks = (seq(0,100,2))^2) + theme_classic()+ ggtitle("Smallpox disease rate per year for all states") + theme(plot.title = element_text(hjust = 0.5)) + ylab("Smallpox Rate- square root transformed") + stat_smooth(method = "glm") + annotate("text", x = 1930, y = 200, label = "Vaccine introduced in 1796", size = 2.5)
+# Smallpox vaccine introduced in 1796
+```
+
+The slopes of the fitted lines are all negative for different diseases, and they are all statistically significant (p-value < 0.05). Small Pox vaccine was introduced in 1796, and the given data set does not contain any Small Pox data from the pre-vaccine era; therefore, it is harder to see the effect of Small Pox vacciine by only looking at the given dataset. However, other diseases besides small pox have sufficient data to explore the conducive effects of vaccines. These plots substantiate how the use of vaccines is extremely valuable and beneficial. 
+
+
+
